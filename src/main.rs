@@ -71,7 +71,7 @@ fn sanitize_path(path: &str) -> String {
         }
     }
 
-    // Trim trailing dash if exists
+    // trim trailing dash if exists
     if sanitized.ends_with('-') {
         sanitized.pop();
     }
@@ -165,7 +165,6 @@ async fn initialize_projects(config: &Config) -> AppResult<HashMap<String, Proje
         let url_path = sanitize_path(&project_cfg.path);
         let project_path = config.libs_path.join(&project_cfg.path);
 
-        // Determine docs path based on build system
         let docs_path = match project_cfg.build_system {
             BuildSystem::Gradle => project_path.join("build/docs/javadoc"),
             BuildSystem::Cargo => project_path.join("target/doc"),
@@ -263,7 +262,7 @@ async fn main() -> AppResult<()> {
     HttpServer::new(move || {
         let state = web::Data::new(state.clone());
 
-        // Create routes for each project
+        // create routes for each project
         let mut app = App::new()
             .app_data(state.clone())
             .wrap(middleware::Logger::default())
@@ -274,7 +273,7 @@ async fn main() -> AppResult<()> {
             let route = project.url_path.clone();
             let resource_path = format!("/{}", route);
 
-            // Create a closure with captured variables for each project
+            // closure with captured variables for each project
             let route_clone = route.clone();
             app = app.service(web::resource(&resource_path).to(move || {
                 let route = route_clone.clone();
@@ -285,7 +284,7 @@ async fn main() -> AppResult<()> {
                 }
             }));
 
-            // Create another closure for the default handler
+            // closure for the default handler
             let route_clone2 = route.clone();
             app = app.service(
                 Files::new(&format!("/{}", route), docs_path)
