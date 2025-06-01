@@ -71,8 +71,8 @@ build_command = "make documentation" # Custom build command
 
 2. **Build from source**:
    ```bash
-   git clone https://github.com/your-username/documentation-server.git
-   cd documentation-server
+   git clone https://github.com/walker84837/lichen.git
+   cd lichen
    cargo build --release
    ```
 
@@ -81,7 +81,7 @@ build_command = "make documentation" # Custom build command
 1. Create a `config.toml` file (see examples above)
 2. Run the server:
    ```bash
-   ./target/release/documentation-server
+   ./target/release/lichen
    ```
 3. Access documentation at:
    ```
