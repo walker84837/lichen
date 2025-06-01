@@ -6,7 +6,6 @@ use std::{
 
 use actix_files::Files;
 use actix_web::{App, HttpResponse, HttpServer, Responder, get, middleware, web};
-use anyhow::{Context, Result, anyhow};
 use serde::Deserialize;
 use tokio::fs;
 use tracing::{Level, error, info, warn};
@@ -79,7 +78,7 @@ fn sanitize_path(path: &str) -> String {
     sanitized
 }
 
-async fn update_project(path: &Path, repo_url: &str) -> Result<()> {
+async fn update_project(path: &Path, repo_url: &str) -> AppResult<()> {
     let repo = git2::Repository::open(path).or_else(|_| git2::Repository::clone(repo_url, path))?;
 
     repo.find_remote("origin")?
@@ -98,33 +97,27 @@ async fn update_project(path: &Path, repo_url: &str) -> Result<()> {
         repo.checkout_head(Some(git2::build::CheckoutBuilder::default().force()))?;
         info!("Fast-forwarded repository at {}", path.display());
     } else {
-        return Err(anyhow!("Non-fast-forward update required"));
+        return Err("Non-fast-forward update required".into());
     }
 
     Ok(())
 }
 
-async fn build_docs(project: &ProjectConfig, base_path: &Path) -> Result<()> {
+async fn build_docs(project: &ProjectConfig, base_path: &Path) -> AppResult<()> {
     let project_path = base_path.join(&project.path);
 
     match project.build_system {
         BuildSystem::Gradle => {
             let gradlew = project_path.join("gradlew");
-            if gradlew.exists() {
-                tokio::process::Command::new(gradlew)
-                    .arg("clean")
-                    .arg("javadoc")
-                    .current_dir(&project_path)
-                    .status()
-                    .await?;
+            tokio::process::Command::new(if gradlew.exists() {
+                gradlew
             } else {
-                tokio::process::Command::new("gradle")
-                    .arg("clean")
-                    .arg("javadoc")
-                    .current_dir(&project_path)
-                    .status()
-                    .await?;
-            }
+                PathBuf::from("gradle")
+            })
+            .args(&["clean", "javadoc"])
+            .current_dir(&project_path)
+            .status()
+            .await?;
         }
         BuildSystem::Cargo => {
             tokio::process::Command::new("cargo")
@@ -151,9 +144,7 @@ async fn build_docs(project: &ProjectConfig, base_path: &Path) -> Result<()> {
 }
 
 async fn load_config() -> AppResult<Config> {
-    let config_str = fs::read_to_string("config.toml")
-        .await
-        .context("Failed to read config.toml")?;
+    let config_str = fs::read_to_string("config.toml").await?;
     let config: Config = toml::from_str(&config_str)?;
     Ok(config)
 }
@@ -225,9 +216,9 @@ async fn index(state: web::Data<Arc<AppState>>) -> impl Responder {
 async fn main() -> AppResult<()> {
     tracing_subscriber::fmt().with_max_level(Level::INFO).init();
 
-    let config = load_config().await?;
+    let config = Arc::new(load_config().await?);
     let projects = initialize_projects(&config).await?;
-    let base_path = config.libs_path.clone();
+    let base_path = &config.clone().libs_path;
 
     if config.update_on_start {
         info!("Updating and building projects...");
@@ -255,7 +246,7 @@ async fn main() -> AppResult<()> {
 
     let state = Arc::new(AppState {
         projects,
-        base_path,
+        base_path: base_path.to_path_buf(),
     });
 
     info!("Starting server on port {}", config.port);
