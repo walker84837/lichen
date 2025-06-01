@@ -1,4 +1,8 @@
-# Documentation Server
+# Lichen
+
+*symbiosis of [fungus](https://en.wikipedia.org/wiki/Rust_(fungus)) + algae*; local, robust
+- local: is able to run locally
+- robust (memory safe): inspired from the meaning of Rust's name
 
 A lightweight server that hosts documentation for multiple projects, automatically updating and building documentation on startup. Supports Java (Gradle), Rust (Cargo), and custom build systems.
 
@@ -144,11 +148,6 @@ Contributions are very welcome!
 - **Build failures**: Check server logs for build command errors
 - **Permission issues**: Ensure server has write access to `libs_path`
 - **Missing index.html**: Verify build commands generate documentation in expected locations
-
-**Log levels**: Control verbosity with `RUST_LOG` environment variable:
-```bash
-RUST_LOG=debug ./documentation-server
-```
 
 ## License
 

@@ -1,7 +1,16 @@
 [package]
-name = "docs-server"
+name = "lichen"
 version = "0.1.0"
 edition = "2024"
+
+[profile.dev]
+debug = false
+
+[profile.release]
+strip = true
+lto = true
+overflow-checks = true
+panic = "abort"
 
 [dependencies]
 actix-files = "0.6.6"
