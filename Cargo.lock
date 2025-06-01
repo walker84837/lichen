@@ -557,22 +557,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "docs-server"
-version = "0.1.0"
-dependencies = [
- "actix-files",
- "actix-web",
- "actix-web-static-files",
- "clap",
- "git2",
- "serde",
- "tokio",
- "toml",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "encoding_rs"
 version = "0.8.35"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -953,6 +937,22 @@ dependencies = [
  "libc",
  "pkg-config",
  "vcpkg",
+]
+
+[[package]]
+name = "lichen"
+version = "0.1.0"
+dependencies = [
+ "actix-files",
+ "actix-web",
+ "actix-web-static-files",
+ "clap",
+ "git2",
+ "serde",
+ "tokio",
+ "toml",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
