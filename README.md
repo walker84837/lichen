@@ -135,7 +135,7 @@ The server is relatively simple, considering what it does. It's derived from my 
 Contributions are very welcome!
 
 - Other build systems
-    - [ ] Zig ([`zig build-lib -femit-docs src/root.zig`](https://zig.guide/build-system/generating-documentation))  
+    - [X] Zig ([`zig build-lib -femit-docs src/root.zig`](https://zig.guide/build-system/generating-documentation))  
     - [ ] Kotlin ([Dokka](https://kotlinlang.org/docs/dokka-cli.html))
     - [ ] Scala (`sbt doc`))
     - [ ] C/C++ ([Doxygen](https://www.doxygen.nl))

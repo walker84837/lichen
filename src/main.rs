@@ -40,6 +40,7 @@ struct ProjectConfig {
 enum BuildSystem {
     Gradle,
     Cargo,
+    Zig,
     Custom,
 }
 
@@ -51,6 +52,7 @@ struct Project {
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 struct AppState {
     projects: HashMap<String, Project>,
     base_path: PathBuf,
@@ -126,6 +128,16 @@ async fn build_docs(project: &ProjectConfig, base_path: &Path) -> AppResult<()> 
                 .status()
                 .await?;
         }
+        BuildSystem::Zig => {
+            let main_file = get_main_zig_file(&project_path)
+                .await
+                .ok_or("No main zig file found")?;
+            tokio::process::Command::new("zig")
+                .args(&["build-lib", "-femit-docs", &main_file.to_string_lossy()])
+                .current_dir(&project_path)
+                .status()
+                .await?;
+        }
         BuildSystem::Custom => {
             if let Some(cmd) = &project.build_command {
                 let mut parts = cmd.split_whitespace();
@@ -141,6 +153,34 @@ async fn build_docs(project: &ProjectConfig, base_path: &Path) -> AppResult<()> 
     }
 
     Ok(())
+}
+
+async fn get_main_zig_file(project_path: &Path) -> Option<PathBuf> {
+    // root.zig
+    let root_zig = project_path.join("src").join("root.zig");
+    if root_zig.exists() {
+        return Some(root_zig);
+    }
+
+    // {project_dir_name}.zig
+    if let Some(dir_name) = project_path.file_name().and_then(|os| os.to_str()) {
+        let candidate = project_path.join("src").join(format!("{}.zig", dir_name));
+        if candidate.exists() {
+            return Some(candidate);
+        }
+    }
+
+    if let Ok(mut entries) = fs::read_dir(project_path.join("src")).await {
+        while let Ok(Some(entry)) = entries.next_entry().await {
+            let path = entry.path();
+            if path.extension().and_then(|e| e.to_str()) == Some("zig") {
+                return Some(path);
+            }
+        }
+    }
+
+    // If we reach here, no `.zig` file was found.
+    None
 }
 
 async fn load_config() -> AppResult<Config> {
@@ -159,6 +199,7 @@ async fn initialize_projects(config: &Config) -> AppResult<HashMap<String, Proje
         let docs_path = match project_cfg.build_system {
             BuildSystem::Gradle => project_path.join("build/docs/javadoc"),
             BuildSystem::Cargo => project_path.join("target/doc"),
+            BuildSystem::Zig => project_path.join("docs"),
             BuildSystem::Custom => project_path.join("docs"),
         };
 
