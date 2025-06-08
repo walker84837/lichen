@@ -2,9 +2,9 @@
 
 *symbiosis of [fungus](https://en.wikipedia.org/wiki/Rust_(fungus)) + algae*; local, robust
 - local: is able to run locally
-- robust (memory safe): inspired from the meaning of Rust's name
+- robust (memory safe): inspired from the origins of Rust's name
 
-A lightweight server that hosts documentation for multiple projects, automatically updating and building documentation on startup. Supports Java (Gradle), Rust (Cargo), and custom build systems.
+A lightweight server that hosts documentation for multiple projects, automatically updating and building documentation on startup. Check the [roadmap](#roadmap) for supported build systems.
 
 ## Features
 
@@ -55,6 +55,7 @@ build_command = "make documentation" # Custom build command
 | `projects` | Array | **Required** | List of project configurations |
 
 #### Project Configuration
+
 | Key | Type | Description |
 |-----|------|-------------|
 | `path` | String | Project directory relative to `libs_path` |
@@ -67,7 +68,7 @@ build_command = "make documentation" # Custom build command
 1. **Prerequisites**:
    - Rust toolchain (install via [rustup](https://rustup.rs/))
    - Git
-   - Java (for Gradle projects) or Rust (for Cargo projects)
+   - The build tool(s) you're using (ie. Cargo for Rust projects)
 
 2. **Build from source**:
    ```bash
@@ -94,7 +95,7 @@ build_command = "make documentation" # Custom build command
 - Lower latency for searching documentation
     - You can use a reverse proxy like [Nginx](https://nginx.org/en/) or [Caddy](https://caddyserver.com/) to host it in a dedicated VPS
     - Runs locally so basically 0ms latency, depending on your current CPU usage
-- Libraries that aren't on any package registry (like Zig, Java, or C/C++, or Cargo for Rust)
+- Libraries that aren't on any (official) package registry (like Zig, Java, or C/C++, or Cargo for Rust)
 
 ## Endpoints
 
@@ -104,7 +105,7 @@ build_command = "make documentation" # Custom build command
 
 ## How it works
 
-The server is relatively simple, considering what it does. It's derived from my [rudimentary docs server](https://gist.github.com/walker84837/e829c0eef1ec4d8036aa6b1b4a275e14) (which just requires Python and a JVM with optionally Gradle).
+The server is relatively simple, considering what it does. It's derived from my [rudimentary docs server](https://gist.github.com/walker84837/e829c0eef1ec4d8036aa6b1b4a275e14) (which just requires Python for the HTTP servers and a JVM with Gradle for Java projects).
 
 1. **Initialization**:
    - Loads configuration from `config.toml`
@@ -134,12 +135,15 @@ The server is relatively simple, considering what it does. It's derived from my 
 
 Contributions are very welcome!
 
-- Other build systems
-    - [X] Zig ([`zig build-lib -femit-docs src/root.zig`](https://zig.guide/build-system/generating-documentation))  
+- Build systems
+    - [X] Cargo
+    - [X] Zig ([`zig build-lib -femit-docs src/root.zig`](https://zig.guide/build-system/generating-documentation)) 
     - [ ] Kotlin ([Dokka](https://kotlinlang.org/docs/dokka-cli.html))
     - [ ] Scala (`sbt doc`))
     - [ ] C/C++ ([Doxygen](https://www.doxygen.nl))
+    - [ ] C# with [XML API doc comments](https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/xmldoc/#tools-that-accept-xml-documentation-input)
 - Consider moving home page to separate component (which allows for more flexibility and editable from Rust)
+    - Should it be made using [Dioxus](https://dioxuslabs.com) or with [yew](https://yew.rs), or what crate provides a convenient yet lightweight frontend without dealing with raw HTML?
 
 ## Troubleshooting
 
@@ -147,7 +151,6 @@ Contributions are very welcome!
 - **Missing repository**: Projects without `repo` configured will skip update phase
 - **Build failures**: Check server logs for build command errors
 - **Permission issues**: Ensure server has write access to `libs_path`
-- **Missing index.html**: Verify build commands generate documentation in expected locations
 
 ## License
 
