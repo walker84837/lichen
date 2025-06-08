@@ -1,3 +1,6 @@
+mod dotnet;
+mod zig;
+
 use std::{
     collections::HashMap,
     path::{Path, PathBuf},
@@ -5,10 +8,10 @@ use std::{
 };
 
 use actix_files::Files;
-use actix_web::{App, HttpResponse, HttpServer, Responder, get, middleware, web};
+use actix_web::{get, middleware, web, App, HttpResponse, HttpServer, Responder};
 use serde::Deserialize;
 use tokio::fs;
-use tracing::{Level, error, info, warn};
+use tracing::{error, info, warn, Level};
 
 type AppResult<T> = Result<T, Box<dyn std::error::Error>>;
 
@@ -41,6 +44,7 @@ enum BuildSystem {
     Gradle,
     Cargo,
     Zig,
+    DotNet,
     Custom,
 }
 
@@ -105,8 +109,28 @@ async fn update_project(path: &Path, repo_url: &str) -> AppResult<()> {
     Ok(())
 }
 
+fn check_if_tool_exists(build_system: &BuildSystem, local_wrapper: Option<PathBuf>) -> bool {
+    match build_system {
+        BuildSystem::Cargo => which::which("cargo").is_ok(),
+        BuildSystem::Gradle => which::which("gradle").is_ok() || local_wrapper.is_some(),
+        BuildSystem::Zig => which::which("zig").is_ok(),
+        BuildSystem::DotNet => which::which("dotnet").is_ok(),
+        BuildSystem::Custom => true,
+    }
+}
+
 async fn build_docs(project: &ProjectConfig, base_path: &Path) -> AppResult<()> {
     let project_path = base_path.join(&project.path);
+
+    let wrapper = if let BuildSystem::Gradle = project.build_system {
+        Some(project_path.join("gradlew"))
+    } else {
+        None
+    };
+
+    if !check_if_tool_exists(&project.build_system, wrapper) {
+        return Err("Build tool doesn't exist.".into());
+    }
 
     match project.build_system {
         BuildSystem::Gradle => {
@@ -129,7 +153,7 @@ async fn build_docs(project: &ProjectConfig, base_path: &Path) -> AppResult<()> 
                 .await?;
         }
         BuildSystem::Zig => {
-            let main_file = get_main_zig_file(&project_path)
+            let main_file = zig::library::get_root_file(&project_path)
                 .await
                 .ok_or("No main zig file found")?;
             tokio::process::Command::new("zig")
@@ -138,6 +162,7 @@ async fn build_docs(project: &ProjectConfig, base_path: &Path) -> AppResult<()> 
                 .status()
                 .await?;
         }
+        BuildSystem::DotNet => {}
         BuildSystem::Custom => {
             if let Some(cmd) = &project.build_command {
                 let mut parts = cmd.split_whitespace();
@@ -153,34 +178,6 @@ async fn build_docs(project: &ProjectConfig, base_path: &Path) -> AppResult<()> 
     }
 
     Ok(())
-}
-
-async fn get_main_zig_file(project_path: &Path) -> Option<PathBuf> {
-    // root.zig
-    let root_zig = project_path.join("src").join("root.zig");
-    if root_zig.exists() {
-        return Some(root_zig);
-    }
-
-    // {project_dir_name}.zig
-    if let Some(dir_name) = project_path.file_name().and_then(|os| os.to_str()) {
-        let candidate = project_path.join("src").join(format!("{}.zig", dir_name));
-        if candidate.exists() {
-            return Some(candidate);
-        }
-    }
-
-    if let Ok(mut entries) = fs::read_dir(project_path.join("src")).await {
-        while let Ok(Some(entry)) = entries.next_entry().await {
-            let path = entry.path();
-            if path.extension().and_then(|e| e.to_str()) == Some("zig") {
-                return Some(path);
-            }
-        }
-    }
-
-    // If we reach here, no `.zig` file was found.
-    None
 }
 
 async fn load_config() -> AppResult<Config> {
@@ -200,6 +197,8 @@ async fn initialize_projects(config: &Config) -> AppResult<HashMap<String, Proje
             BuildSystem::Gradle => project_path.join("build/docs/javadoc"),
             BuildSystem::Cargo => project_path.join("target/doc"),
             BuildSystem::Zig => project_path.join("docs"),
+            // TODO: determine actual folder: bin/net-x.0/.../
+            BuildSystem::DotNet => project_path.join("docs"),
             BuildSystem::Custom => project_path.join("docs"),
         };
 
